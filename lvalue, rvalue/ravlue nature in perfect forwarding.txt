@@ -1,0 +1,66 @@
+what nature of rvalue is preserved when perfect forwarding is used ?
+
+Perfect forwarding preserves the value category of an argument — nothing more mystical than that, but also nothing less.
+
+In plain words:
+it preserves whether the original argument was an lvalue or an rvalue.
+
+That’s the “nature” being preserved.
+
+Why this matters
+
+When a function receives parameters, they tend to forget where they came from.
+
+Example:
+
+template <typename T>
+void wrapper(T&& arg) {
+    foo(arg);   // ❌ arg is always an lvalue here
+}
+
+
+Even if you pass a temporary into wrapper, the name arg itself is an lvalue. The original intent is lost.
+
+Perfect forwarding fixes exactly this amnesia.
+
+What perfect forwarding does
+template <typename T>
+void wrapper(T&& arg) {
+    foo(std::forward<T>(arg));  // ✅ value category preserved
+}
+
+
+std::forward<T>(arg) does this:
+
+If the caller passed an lvalue, forward it as an lvalue
+
+If the caller passed an rvalue, forward it as an rvalue
+
+No accidental copies. No accidental moves.
+
+Important precision (interview gold)
+
+T&& here is a forwarding reference (not a plain rvalue reference)
+
+Forwarding references appear only in template type deduction
+
+std::forward is a conditional cast, not a move
+
+std::move always turns something into an rvalue.
+std::forward turns it into whatever it originally was.
+
+Tiny mental model
+
+std::move = “treat this as disposable”
+
+std::forward = “treat this exactly as the caller intended”
+
+Perfect forwarding preserves lvalue-ness vs rvalue-ness, which in turn preserves:
+
+    copy vs move behavior
+
+    constness interactions
+
+    overload resolution correctness
+
+Once you see this, factory functions and STL internals suddenly stop looking like black magic and start looking like disciplined bookkeeping.
