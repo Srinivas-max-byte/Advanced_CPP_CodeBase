@@ -1,4 +1,6 @@
 #include <iostream>
+#include <utility>  // Required for std::forward
+#include <string>   // Required for std::string
 using namespace std;
 
 
@@ -119,6 +121,43 @@ class SharedPtr
         }
 };
 
+// Helper function for make_shared equivalent
+// typename... Args: Variadic template (ellipsis) allows this function to accept any number of arguments
+//                    of any types. This makes my_make_shared flexible - works with constructors that take
+//                    0, 1, 2, or more parameters. Example: my_make_shared<Foo>() or my_make_shared<Foo>(10, "hello")
+template <typename T, typename... Args>
+// Args&&... args: Universal/forwarding references (r-value references in template context).
+//                 The && here doesn't mean "r-value only" - it's a forwarding reference that preserves
+//                 the value category (l-value or r-value) of the arguments passed in. This allows
+//                 perfect forwarding - we can forward both temporary objects (r-values) and named
+//                 variables (l-values) without unnecessary copies.
+SharedPtr<T> my_make_shared(Args&&... args) {
+    // std::forward<Args>(args)...: Perfect forwarding - forwards each argument with its original value category.
+    //                               If an l-value was passed, it forwards as l-value; if r-value, forwards as r-value.
+    //                               This prevents unnecessary copies and enables move semantics when possible.
+    //                               The ... expands the pack, applying forward to each argument individually.
+    return SharedPtr<T>(new T(std::forward<Args>(args)...));
+}
+
+// Demo class to demonstrate my_make_shared with user-defined types
+class MyDemoClass {
+public:
+    int value;
+    string name;
+    
+    MyDemoClass(int v, string n) : value(v), name(n) {
+        std::cout << "MyDemoClass constructor: " << name << " (value: " << value << ")" << std::endl;
+    }
+    
+    ~MyDemoClass() {
+        std::cout << "MyDemoClass destructor: " << name << std::endl;
+    }
+    
+    void display() const {
+        std::cout << "Name: " << name << ", Value: " << value << std::endl;
+    }
+};
+
 int main() 
 {
     // 1. Default construction (tests constructor with nullptr)
@@ -170,6 +209,32 @@ int main()
 
     std::cout << "p1 count after inner scope ends: " << p1.count() << std::endl;
 
+    // 7.5. my_make_shared demonstration (variadic template function)
+    std::cout << "\n--- 7.5. my_make_shared FUNCTIONALITY (Variadic Template) ---" << std::endl;
+    
+    // Using my_make_shared with int (single argument)
+    SharedPtr<int> pMake1 = my_make_shared<int>(777);
+    std::cout << "pMake1 created with my_make_shared<int>(777), value: " << *pMake1 << std::endl;
+    std::cout << "pMake1 count: " << pMake1.count() << std::endl;
+    
+    // Using my_make_shared with MyDemoClass (multiple arguments)
+    SharedPtr<MyDemoClass> pMake2 = my_make_shared<MyDemoClass>(100, "DemoObject1");
+    std::cout << "pMake2 created with my_make_shared<MyDemoClass>(100, \"DemoObject1\")" << std::endl;
+    pMake2->display();
+    std::cout << "pMake2 count: " << pMake2.count() << std::endl;
+    
+    // Copy the shared_ptr created with my_make_shared
+    SharedPtr<MyDemoClass> pMake3 = pMake2;
+    std::cout << "\nAfter copying pMake2 to pMake3:" << std::endl;
+    std::cout << "pMake2 count: " << pMake2.count() << std::endl;
+    std::cout << "pMake3 count: " << pMake3.count() << std::endl;
+    
+    // Using my_make_shared with another MyDemoClass instance (demonstrates variadic template flexibility)
+    SharedPtr<MyDemoClass> pMake4 = my_make_shared<MyDemoClass>(200, "DemoObject2");
+    std::cout << "\npMake4 created with my_make_shared<MyDemoClass>(200, \"DemoObject2\")" << std::endl;
+    pMake4->display();
+    std::cout << "pMake4 count: " << pMake4.count() << std::endl;
+
     // 8. Reset functionality demonstration
     std::cout << "\n--- 8. RESET FUNCTIONALITY ---" << std::endl;
     
@@ -209,7 +274,8 @@ int main()
     std::cout << "\n--- 10. CUSTOM DELETER FUNCTIONALITY ---" << std::endl;
     
     // Define a custom deleter function
-    auto custom_deleter = [](int* p) {
+    //auto custom_deleter = [](int* p)
+    void (*custom_deleter)(int*) = [](int* p) {
         std::cout << "Custom deleter called! Deleting value: " << *p << std::endl;
         delete p;
     };
