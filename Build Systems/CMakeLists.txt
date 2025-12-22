@@ -32,6 +32,11 @@ set(SOURCES
 # Must be called before targets in this file try to link to 'maths'
 add_subdirectory(maths)
 
+# Process the CMakeLists.txt file in the 'physics' subdirectory
+# This builds the 'physics' shared library target defined in that subdirectory
+# Must be called before targets in this file try to link to 'physics'
+add_subdirectory(physics)
+
 # Create an executable target named 'calculator_app'
 # The executable will be built from all source files listed in ${SOURCES}
 # ${SOURCES} expands to the list of source files defined above
@@ -41,4 +46,10 @@ add_executable(calculator_app ${SOURCES})
 # This makes the functions and classes from the 'maths' library available to the executable
 # The library must be built before linking (handled by add_subdirectory above)
 target_link_libraries(calculator_app maths)
+
+# Link the 'physics' shared library to the 'calculator_app' executable
+# This makes the functions and classes from the 'physics' library available to the executable
+# Since physics is a SHARED library, the .dll/.so file must be present at runtime
+# The library must be built before linking (handled by add_subdirectory above)
+target_link_libraries(calculator_app physics) #Can be done in same line as above.
 

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 
 # Define the project name for this library
 # This sets variables like PROJECT_NAME, PROJECT_SOURCE_DIR, etc.
-project(maths)
+project(physics)
 
 # Set the C++ standard version to use for compilation
 # C++11 provides features like auto, nullptr, lambda functions, etc.
@@ -22,31 +22,35 @@ include_directories(include)
 # Define a variable containing all source files needed for the library
 # Using a variable makes it easier to manage and maintain the list of sources
 set(SOURCES
-    src/math.cpp    # Implementation file containing math utility functions
+    src/physics.cpp    # Implementation file containing physics utility functions
 )
 
 option(ADVANCED_API_ENABLE "THIS IS FOR THE ADVANCED API" ON)
 
-# Create a static library target named 'maths'
-# STATIC means the library will be compiled into a .lib (Windows) or .a (Linux) file
-# The library code is copied into any executable that links to it
-# This must be called BEFORE using target-specific commands like target_include_directories
-add_library(maths STATIC ${SOURCES})
+# Here we are mentioning where to keep the library after creation so that main.cpp finds it from there(not giving own path using predefined paths).
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-if(ADVANCED_API_ENABLE)
-    message(Inside if: condition)
-    target_compile_definitions(maths PUBLIC ADVANCED_API)
-endif()
+# Create a shared library target named 'physics'
+# SHARED means the library will be compiled into a .dll (Windows) or .so (Linux) file
+# The library code is loaded at runtime, allowing multiple executables to share the same library code in memory
+# Shared libraries must be present at runtime for the executable to run
+# This must be called BEFORE using target-specific commands like target_include_directories
+add_library(physics SHARED ${SOURCES})
+
+
+target_compile_definitions(physics PRIVATE PHYSICS_EXPORTS)
 
 # Modern/target-based way to specify include directories
 # PUBLIC means: include directories are used both when building this library AND when other targets link to it
 # Note: Using namespaces in library source code is essential because it prevents naming conflicts when multiple
-#       libraries are linked together. Without namespaces, functions like "square()" from different libraries
+#       libraries are linked together. Without namespaces, functions like "force()" from different libraries
 #       would collide, causing compilation errors. Namespaces provide a scope that isolates library symbols
-#       and allows multiple libraries to coexist safely in the same project (e.g., math_function::square())
+#       and allows multiple libraries to coexist safely in the same project (e.g., physics_function::force())
 # PRIVATE means: include directories are used only when building this library itself, but NOT propagated to targets that link to it
 # INTERFACE means: include directories are NOT used when building this library, but ARE propagated to targets that link to it (header-only libraries)
 # This is more efficient than include_directories because it automatically propagates to dependent targets
 # IMPORTANT: This must come AFTER add_library, because you can only set properties on existing targets
-target_include_directories(maths PUBLIC include)
+target_include_directories(physics PUBLIC include)
 
