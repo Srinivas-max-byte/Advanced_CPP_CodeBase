@@ -4,13 +4,51 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <thread>
 
 using namespace std;
+
+void handle_client(int client_socket, struct sockaddr_in client_address) {
+    const int BUFFER_SIZE = 1024;
+    
+    // Get client IP address and port
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_address.sin_addr, client_ip, INET_ADDRSTRLEN);
+    int client_port = ntohs(client_address.sin_port);
+    
+    cout << "\nClient connected from " << client_ip << ":" << client_port << endl;
+    
+    // Receive data from client
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    
+    ssize_t bytes_received = recv(client_socket, buffer, BUFFER_SIZE - 1, 0);
+    
+    if (bytes_received > 0) {
+        buffer[bytes_received] = '\0';
+        cout << "Received from client: " << buffer << endl;
+        
+        // Send response back to client
+        const char* response = "Message received by server!";
+        send(client_socket, response, strlen(response), 0);
+        cout << "Response sent to client" << endl;
+    } else if (bytes_received == 0) {
+        cout << "Client disconnected" << endl;
+    } else {
+        cerr << "Error: Failed to receive data from client" << endl;
+    }
+    
+    // Close the client socket
+    cout << "Closing client socket" << endl;
+    close(client_socket);
+
+    cout << "Waiting for 2 minutes before closing the client connection handler" << endl;
+    sleep(120);
+}
 
 int main() {
     const int PORT = 8080;
     const int BACKLOG = 5;
-    const int BUFFER_SIZE = 1024;
     
     // Create a socket
     // socket() parameters:
@@ -71,35 +109,9 @@ int main() {
             continue;
         }
         
-        // Get client IP address and port
-        char client_ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &client_address.sin_addr, client_ip, INET_ADDRSTRLEN);
-        int client_port = ntohs(client_address.sin_port);
-        
-        cout << "\nClient connected from " << client_ip << ":" << client_port << endl;
-        
-        // Receive data from client
-        char buffer[BUFFER_SIZE];
-        memset(buffer, 0, BUFFER_SIZE);
-        
-        ssize_t bytes_received = recv(client_socket, buffer, BUFFER_SIZE - 1, 0);
-        
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';
-            cout << "Received from client: " << buffer << endl;
-            
-            // Send response back to client
-            const char* response = "Message received by server!";
-            send(client_socket, response, strlen(response), 0);
-            cout << "Response sent to client" << endl;
-        } else if (bytes_received == 0) {
-            cout << "Client disconnected" << endl;
-        } else {
-            cerr << "Error: Failed to receive data from client" << endl;
-        }
-        
-        // Close the client socket
-        close(client_socket);
+        // Create a detached thread to handle the client
+        thread client_thread(handle_client, client_socket, client_address);
+        client_thread.detach();
     }
     
     // Close the server socket (this line is never reached in infinite loop)
