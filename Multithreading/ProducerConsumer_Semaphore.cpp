@@ -25,9 +25,7 @@
 #include <thread>
 #include <semaphore>
 #include <queue>
-#include <chrono>
 #include <vector>
-#include <random>
 #include <mutex>
 
 using namespace std;
@@ -39,14 +37,9 @@ private:
     const size_t capacity;                  // Maximum capacity of the buffer
     
     // Semaphores for synchronization
-    counting_semaphore<> empty;             // Counts empty slots (producer waits on this)
-    counting_semaphore<> full;              // Counts full slots (consumer waits on this)
+    counting_semaphore<10> empty;             // Counts empty slots (producer waits on this)
+    counting_semaphore<10> full;              // Counts full slots (consumer waits on this)
     binary_semaphore mutex;                 // Binary semaphore for mutual exclusion
-    
-    // Statistics (using regular mutex for thread-safe statistics only)
-    std::mutex statsMutex;
-    int totalProduced;
-    int totalConsumed;
 
 public:
     // Constructor initializes semaphores
@@ -55,19 +48,16 @@ public:
     // mutex = 1 (binary semaphore for mutual exclusion)
     SemaphoreBuffer(size_t cap) 
         : capacity(cap), 
-          empty(cap),           // Initialize with capacity (all empty)
+          empty(cap),           // Initialize with capacity (all empty),  initializes a semaphore that allows up to 10 concurrent accesses, with 5 available permits initially.
           full(0),              // Initialize with 0 (none full)
           mutex(1),             // Binary semaphore (1 = unlocked)
           totalProduced(0), 
           totalConsumed(0) {
-        cout << "Semaphore Buffer initialized with capacity: " << capacity << endl;
-        cout << "  - empty semaphore = " << capacity << endl;
-        cout << "  - full semaphore = 0" << endl;
-        cout << "  - mutex semaphore = 1" << endl;
     }
     
     // Producer calls this method to add an item to the buffer
-    void produce(int item, int producerId) {
+    void produce(int item, int producerId) 
+    {
         // Step 1: Wait for an empty slot (decrement empty semaphore)
         // If empty = 0 (buffer is full), producer blocks here
         empty.acquire();
@@ -77,16 +67,6 @@ public:
         
         // Critical Section: Add item to buffer
         buffer.push(item);
-        size_t currentSize = buffer.size();
-        
-        // Update statistics
-        {
-            lock_guard<std::mutex> lock(statsMutex);
-            totalProduced++;
-        }
-        
-        cout << "Producer " << producerId << " produced: " << item 
-             << " | Buffer size: " << currentSize << "/" << capacity << endl;
         
         // Step 3: Release mutex
         mutex.release();
@@ -96,7 +76,8 @@ public:
     }
     
     // Consumer calls this method to remove an item from the buffer
-    int consume(int consumerId) {
+    int consume(int consumerId) 
+    {
         // Step 1: Wait for a full slot (decrement full semaphore)
         // If full = 0 (buffer is empty), consumer blocks here
         full.acquire();
@@ -107,16 +88,6 @@ public:
         // Critical Section: Remove item from buffer
         int item = buffer.front();
         buffer.pop();
-        size_t currentSize = buffer.size();
-        
-        // Update statistics
-        {
-            lock_guard<std::mutex> lock(statsMutex);
-            totalConsumed++;
-        }
-        
-        cout << "Consumer " << consumerId << " consumed: " << item 
-             << " | Buffer size: " << currentSize << "/" << capacity << endl;
         
         // Step 3: Release mutex
         mutex.release();
@@ -126,39 +97,13 @@ public:
         
         return item;
     }
-    
-    // Get current buffer size (thread-safe)
-    size_t size() {
-        mutex.acquire();
-        size_t sz = buffer.size();
-        mutex.release();
-        return sz;
-    }
-    
-    // Print statistics
-    void printStatistics() {
-        lock_guard<std::mutex> lock(statsMutex);
-        cout << "\n=== Statistics ===" << endl;
-        cout << "Total items produced: " << totalProduced << endl;
-        cout << "Total items consumed: " << totalConsumed << endl;
-        cout << "Items remaining in buffer: " << size() << endl;
-    }
 };
 
 // Producer function: produces items and adds them to the buffer
 void producer(SemaphoreBuffer& buffer, int producerId, int itemCount) {
-    // Random number generator for simulating variable production time
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<> productionTime(100, 500);
-    uniform_int_distribution<> itemValue(1, 100);
-    
     for (int i = 0; i < itemCount; ++i) {
-        // Simulate time taken to produce an item
-        this_thread::sleep_for(chrono::milliseconds(productionTime(gen)));
-        
-        // Generate a random item value
-        int item = itemValue(gen);
+        // Generate item value: producerId * 100 + item number
+        int item = producerId * 100 + i;
         
         // Add the item to the buffer (will block if buffer is full)
         buffer.produce(item, producerId);
@@ -169,17 +114,9 @@ void producer(SemaphoreBuffer& buffer, int producerId, int itemCount) {
 
 // Consumer function: consumes items from the buffer
 void consumer(SemaphoreBuffer& buffer, int consumerId, int itemCount) {
-    // Random number generator for simulating variable consumption time
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<> consumptionTime(150, 600);
-    
     for (int i = 0; i < itemCount; ++i) {
         // Get an item from the buffer (will block if buffer is empty)
         int item = buffer.consume(consumerId);
-        
-        // Simulate time taken to process the consumed item
-        this_thread::sleep_for(chrono::milliseconds(consumptionTime(gen)));
     }
     
     cout << "Consumer " << consumerId << " finished consuming " << itemCount << " items" << endl;

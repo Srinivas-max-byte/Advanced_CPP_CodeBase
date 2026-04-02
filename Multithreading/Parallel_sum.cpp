@@ -15,7 +15,7 @@ long long getSingleThreadResult(vector<int>& data) {
 }
 
 long long getMultiThreadResult(vector<int>& data, int numThreads) {
-	vector<thread> threads;
+	 vector<std::thread> threads;
 	vector<long long> partialResults(numThreads, 0LL);
 	long long chunkSize = data.size() / numThreads;
 	for (int t = 0; t < numThreads; ++t) {
@@ -55,7 +55,7 @@ long long getMultiThreadResult(vector<int>& data, int numThreads) {
 int main() {
 	vector<int> data(10000000, 1);
 
-	const int NUM_THREADS = thread::hardware_concurrency();
+	 const int NUM_THREADS = std::thread::hardware_concurrency();
 
 	auto start = chrono::high_resolution_clock::now();
 	long long res = getSingleThreadResult(data);

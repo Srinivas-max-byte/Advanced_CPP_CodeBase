@@ -96,7 +96,8 @@ public:
         // 4. shared_ptr ensures the task isn't destroyed until the worker thread completes execution
         auto task = make_shared<packaged_task<return_type()>>(
             bind(forward<F>(f), forward<Args>(args)...)
-        );
+        ); // Note: make_shared returns std::shared_ptr<packaged_task<...>> (not a promise). 
+        //The associated std::future is obtained by calling task->get_future().
         
         // Get the future associated with the packaged_task
         future<return_type> result = task->get_future();
