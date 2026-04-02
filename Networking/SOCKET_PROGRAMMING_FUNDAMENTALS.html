@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket Programming Fundamentals in C++</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.3;
+            font-size: 11px;
+            color: #333;
+            background: white;
+            padding: 15px;
+        }
+        
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            .container {
+                page-break-after: avoid;
+            }
+        }
+        
+        .container {
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1e40af;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+        
+        h2 {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+            margin-top: 8px;
+            margin-bottom: 5px;
+            font-size: 12px;
+            padding-bottom: 2px;
+        }
+        
+        .columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .section {
+            break-inside: avoid;
+        }
+        
+        pre {
+            background: #f5f5f5;
+            border-left: 3px solid #2563eb;
+            padding: 6px;
+            margin: 4px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            overflow-x: auto;
+            line-height: 1.2;
+            border-radius: 3px;
+        }
+        
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+        }
+        
+        .subsection {
+            margin-bottom: 6px;
+        }
+        
+        .subsection-title {
+            font-weight: bold;
+            color: #1e40af;
+            font-size: 11px;
+            margin-top: 4px;
+            margin-bottom: 2px;
+        }
+        
+        p {
+            margin: 2px 0;
+        }
+        
+        ul {
+            margin-left: 15px;
+            margin-bottom: 4px;
+        }
+        
+        li {
+            margin: 1px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 3px 0;
+            font-size: 10px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 3px;
+            text-align: left;
+        }
+        
+        th {
+            background: #e0e7ff;
+            font-weight: bold;
+        }
+        
+        .note {
+            background: #fef3c7;
+            border-left: 3px solid #f59e0b;
+            padding: 3px 5px;
+            margin: 3px 0;
+            font-size: 10px;
+        }
+        
+        .header-info {
+            background: #e0e7ff;
+            padding: 5px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Socket Programming Fundamentals in C++</h1>
+        
+        <div class="header-info">
+            <strong>Includes:</strong> Key Includes: &lt;sys/socket.h&gt;, &lt;netinet/in.h&gt;, &lt;arpa/inet.h&gt;, &lt;unistd.h&gt; | 
+            <strong>Note:</strong> Windows uses Winsock2.h; Linux/Mac use socket.h
+        </div>
+        
+        <div class="columns">
+            <!-- Left Column -->
+            <div>
+                <!-- Basic Concepts -->
+                <div class="section">
+                    <h2>Basic Concepts</h2>
+                    <div class="subsection">
+                        <div class="subsection-title">Socket Types:</div>
+                        <ul>
+                            <li><strong>SOCK_STREAM:</strong> TCP (reliable, ordered)</li>
+                            <li><strong>SOCK_DGRAM:</strong> UDP (fast, unreliable)</li>
+                        </ul>
+                    </div>
+                    <div class="subsection">
+                        <div class="subsection-title">Address Family:</div>
+                        <ul>
+                            <li><strong>AF_INET:</strong> IPv4</li>
+                            <li><strong>AF_INET6:</strong> IPv6</li>
+                        </ul>
+                    </div>
+                    <div class="subsection">
+                        <div class="subsection-title">Key Functions:</div>
+                        <ul>
+                            <li><strong>socket():</strong> Create socket</li>
+                            <li><strong>bind():</strong> Assign address</li>
+                            <li><strong>listen():</strong> Listen for connections</li>
+                            <li><strong>accept():</strong> Accept client</li>
+                            <li><strong>connect():</strong> Connect to server</li>
+                            <li><strong>send()/recv():</strong> Data transfer</li>
+                            <li><strong>close():</strong> Close socket</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Server Side -->
+                <div class="section">
+                    <h2>Server Side (TCP)</h2>
+                    <div class="subsection">
+                        <div class="subsection-title">Setup Steps:</div>
+                        <ol style="margin-left: 15px; font-size: 10px;">
+                            <li>Create socket</li>
+                            <li>Bind address</li>
+                            <li>Listen for connections</li>
+                            <li>Accept connections</li>
+                            <li>Send/Receive data</li>
+                        </ol>
+                    </div>
+                    <pre><code>#include &lt;iostream&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;unistd.h&gt;
+
+int main() {
+  int server_fd = socket(AF_INET,
+                         SOCK_STREAM, 0);
+  
+  sockaddr_in address;
+  address.sin_family = AF_INET;
+  address.sin_addr.s_addr = INADDR_ANY;
+  address.sin_port = htons(8080);
+  
+  bind(server_fd, (sockaddr*)&address,
+       sizeof(address));
+  
+  listen(server_fd, 5);
+  
+  int client_fd = accept(server_fd,
+                         nullptr, nullptr);
+  
+  char buffer[1024] = {0};
+  recv(client_fd, buffer,
+       sizeof(buffer), 0);
+  
+  send(client_fd, "Hello Client", 12, 0);
+  
+  close(client_fd);
+  close(server_fd);
+  return 0;
+}</code></pre>
+                    <div class="note">
+                        <strong>htons():</strong> Host to network byte order (endianness)
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column -->
+            <div>
+                <!-- Client Side -->
+                <div class="section">
+                    <h2>Client Side (TCP)</h2>
+                    <div class="subsection">
+                        <div class="subsection-title">Setup Steps:</div>
+                        <ol style="margin-left: 15px; font-size: 10px;">
+                            <li>Create socket</li>
+                            <li>Connect to server</li>
+                            <li>Send/Receive data</li>
+                            <li>Close socket</li>
+                        </ol>
+                    </div>
+                    <pre><code>#include &lt;iostream&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;arpa/inet.h&gt;
+#include &lt;unistd.h&gt;
+
+int main() {
+  int sock = socket(AF_INET,
+                    SOCK_STREAM, 0);
+  
+  sockaddr_in serv_addr;
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(8080);
+  
+  inet_pton(AF_INET, "127.0.0.1",
+            &serv_addr.sin_addr);
+  
+  connect(sock, (sockaddr*)&serv_addr,
+          sizeof(serv_addr));
+  
+  send(sock, "Hello Server", 12, 0);
+  
+  char buffer[1024] = {0};
+  recv(sock, buffer, sizeof(buffer), 0);
+  
+  close(sock);
+  return 0;
+}</code></pre>
+                    <div class="note">
+                        <strong>inet_pton():</strong> Convert IP string to binary format
+                    </div>
+                </div>
+                
+                <!-- Important Functions -->
+                <div class="section">
+                    <h2>Function Reference</h2>
+                    <table>
+                        <tr>
+                            <th>Function</th>
+                            <th>Purpose</th>
+                        </tr>
+                        <tr>
+                            <td>socket()</td>
+                            <td>Create socket descriptor</td>
+                        </tr>
+                        <tr>
+                            <td>bind()</td>
+                            <td>Bind to address/port</td>
+                        </tr>
+                        <tr>
+                            <td>listen()</td>
+                            <td>Listen for incoming</td>
+                        </tr>
+                        <tr>
+                            <td>accept()</td>
+                            <td>Accept connection</td>
+                        </tr>
+                        <tr>
+                            <td>connect()</td>
+                            <td>Connect to server</td>
+                        </tr>
+                        <tr>
+                            <td>send()</td>
+                            <td>Send data</td>
+                        </tr>
+                        <tr>
+                            <td>recv()</td>
+                            <td>Receive data</td>
+                        </tr>
+                        <tr>
+                            <td>close()</td>
+                            <td>Close socket</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- Error Handling -->
+                <div class="section">
+                    <h2>Error Handling</h2>
+                    <pre><code>if (socket_fd < 0) {
+  perror("Socket failed");
+  return -1;
+}
+
+if (connect(sock, ...) < 0) {
+  std::cerr << "Connection failed"
+            << std::endl;
+  close(sock);
+}</code></pre>
+                    <div class="note">
+                        <strong>perror():</strong> Print system error | <strong>Return -1:</strong> Indicates failure
+                    </div>
+                </div>
+                
+                <!-- Quick Reference -->
+                <div class="section">
+                    <h2>Quick Reference</h2>
+                    <ul style="font-size: 10px;">
+                        <li>Port 0-1023: System reserved</li>
+                        <li>Port 1024-49151: User ports</li>
+                        <li>Port 49152-65535: Dynamic ports</li>
+                        <li><strong>htons():</strong> Convert port to network byte</li>
+                        <li><strong>shutdown():</strong> Close one direction</li>
+                        <li><strong>SO_REUSEADDR:</strong> Reuse port immediately</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
